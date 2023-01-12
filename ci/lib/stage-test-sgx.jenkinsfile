@@ -84,7 +84,7 @@ stage('test-sgx') {
                 then
                     sed -i 's/sgx.enclave_size = "1G"/sgx.enclave_size = "2G"/g' python.manifest.template
                 fi
-                make ${MAKEOPTS} DEBUG=1
+                make ${MAKEOPTS}
                 make ${MAKEOPTS} SGX=1 check
             '''
         }
@@ -95,6 +95,7 @@ stage('test-sgx') {
         archiveArtifacts 'CI-Examples/python/TEST_*'
         sh '''
             cat CI-Examples/python/TEST_STDOUT
+            cat CI-Examples/python/TEST_STDERR
         '''
     }
 

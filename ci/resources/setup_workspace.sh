@@ -5,7 +5,7 @@ chmod +x $WORKSPACE/ci/resources/setup_ltp.sh
 bash $WORKSPACE/ci/resources/setup_ltp.sh
 
 cd $WORKSPACE/examples
-for i in $(find -name '*.manifest.template');
+for i in $(find -name '*manifest.template');
 do
   sed -i '$ a sgx.debug = true' $i;
   if [[ "$EDMM" == 1 ]]; then
@@ -19,6 +19,11 @@ cp -rf $WORKSPACE/go_helloworld CI-Examples/
 cp -rf $WORKSPACE/examples/* CI-Examples/
 cp -rf $WORKSPACE/test_workloads.py . 
 cp -rf $WORKSPACE/utils/openvino_setup.sh CI-Examples/openvino/
+
+for i in $(find -name '*manifest.template');
+do
+  sed -i '$ a sgx.enable_stats = true' $i;
+done;
 
 if [[ "$SGX" == 1 ]]; then
   cp -rf ~/jenkins/sandstone-50-bin CI-Examples/
