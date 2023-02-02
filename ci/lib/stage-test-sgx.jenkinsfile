@@ -17,7 +17,6 @@ stage('test-sgx') {
             // separately
             sh '''
                 cd libos/test/ltp
-                export GRAMINE_LTP_LIVE_OUTPUT=fcntl14,fdatasync01
                 python3 -m pytest -v  --junit-xml=ltp-sgx.xml
             '''                
             /*
@@ -84,6 +83,10 @@ stage('test-sgx') {
                 then
                     sed -i 's/sgx.enclave_size = "1G"/sgx.enclave_size = "2G"/g' python.manifest.template
                 fi
+                if [ "${base_os}" == *"rhel"* && "${EDMM}" == 1]
+                then
+                    sed -i "s/wait_for_server 300 127.0.0.1 8005/wait_for_server 300 127.0.0.1 8005\nsleep 450/" run-tests.sh
+                fi
                 make ${MAKEOPTS} DEBUG=1
                 make ${MAKEOPTS} SGX=1 check
             '''
@@ -92,7 +95,6 @@ stage('test-sgx') {
         env.build_ok = false
         sh 'echo "Python Example Test Failed"'
     } finally {
-        archiveArtifacts 'CI-Examples/python/TEST_*'
         sh '''
             cat CI-Examples/python/TEST_STDOUT
         '''
