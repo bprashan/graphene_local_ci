@@ -17,6 +17,7 @@ RUN dnf update -y \
         automake \
         bison \
         binutils \
+        busybox \
         cargo \
         cmake \
         elfutils-libelf-devel \
@@ -60,6 +61,7 @@ RUN dnf update -y \
         openssl-devel \
         patch \
         pkg-config \
+        procps-ng \
         protobuf-c-compiler \
         protobuf-c-devel \
         protobuf-compiler \
