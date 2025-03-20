@@ -29,8 +29,7 @@ class Test_Workload_Results():
         assert("Success 5/7" in bash_contents)
         assert("Success 6/7" in bash_contents)
         assert("error: " not in bash_contents)
-        if (os_release_id != "alpine"):
-            assert("Success 7/7" in bash_contents)
+        assert("Success 7/7" in bash_contents)
 
     @pytest.mark.examples
     def test_python_workload(self):
@@ -52,7 +51,7 @@ class Test_Workload_Results():
         expected_output = ["2", "18"]
         assert(any(n in memcached_contents for n in expected_output))
         assert("error: " not in memcached_contents)
-        
+
     @pytest.mark.examples
     def test_lighttpd_workload(self):
         for filename in glob.glob("CI-Examples/lighttpd/result-*"):
@@ -72,7 +71,6 @@ class Test_Workload_Results():
         assert("error: " not in nginx_contents)
 
     @pytest.mark.examples
-    @pytest.mark.skipif(os_release_id == "alpine", reason='Blender is not enabled for Alpine')
     def test_blender(self):
         blender_result_file = "CI-Examples/blender/data/images/simple_scene.blend0001.png"
         assert(path.exists(blender_result_file))
@@ -93,7 +91,7 @@ class Test_Workload_Results():
                 and ("row 2" in sqlite_contents) \
                 and ("row 1" in sqlite_contents))
         assert("error: " not in sqlite_contents)
-    
+
     @pytest.mark.examples
     def test_busybox_workload(self):
         busybox_result_file = open("CI-Examples/busybox/result.txt", "r")
@@ -109,7 +107,7 @@ class Test_Workload_Results():
         go_helloworld_contents = go_helloworld_result_file.read()
         assert("Hello, world" in go_helloworld_contents)
         assert("error: " not in go_helloworld_contents)
-    
+
     @pytest.mark.sdtest
     @pytest.mark.skipif((int(no_cores) < 16 or sgx_mode != '1'),
                     reason="Sandstone is enabled on servers with SGX")
@@ -157,6 +155,27 @@ class Test_Workload_Results():
         assert("error: " not in tensorflow_contents)
 
     @pytest.mark.examples
+    @pytest.mark.skipif((os_release_id not in ["ubuntu","rhel","centos"]) or
+                       not(int(no_cores) > 16), reason="Run only on Ubuntu/RHEL/CentOS Server machines")
+    def test_mysql_workload(self):
+        mysql_result = open("CI-Examples/mysql/CREATE_RESULT", "r")
+        mysql_contents = mysql_result.read()
+        assert("Creating table 'sbtest2'..." in mysql_contents)
+        assert("Creating table 'sbtest1'..." in mysql_contents)
+        assert("Inserting 100000 records into 'sbtest2'" in mysql_contents)
+        assert("Inserting 100000 records into 'sbtest1'" in mysql_contents)
+        assert("error: " not in mysql_contents)
+        mysql_result = open("CI-Examples/mysql/RUN_RESULT", "r")
+        mysql_contents = mysql_result.read()
+        assert("Threads fairness:" in mysql_contents)
+        assert("error: " not in mysql_contents)
+        mysql_result = open("CI-Examples/mysql/DELETE_RESULT", "r")
+        mysql_contents = mysql_result.read()
+        assert("Dropping table 'sbtest1'..." in mysql_contents)
+        assert("Dropping table 'sbtest2'..." in mysql_contents)
+        assert("error: " not in mysql_contents)
+
+    @pytest.mark.examples
     def test_curl_workload(self):
         curl_result_file = open("CI-Examples/curl/RESULT", "r")
         curl_contents = curl_result_file.read()
@@ -171,8 +190,8 @@ class Test_Workload_Results():
         assert("error: " not in nodejs_contents)
 
     @pytest.mark.examples
-    @pytest.mark.skipif(((base_os in ["ubuntu24.04", "alpine3.18"]) or (node_label == "graphene_22.04_5.19")),
-                    reason="Pytorch not compatible for musl.")
+    @pytest.mark.skipif(((node_label == "graphene_22.04_5.19") and (sgx_mode == '1')),
+                    reason="Node is having some issues")
     def test_pytorch_workload(self):
         pytorch_result_file = open("CI-Examples/pytorch/result.txt", "r")
         pytorch_contents = pytorch_result_file.read()
@@ -184,6 +203,8 @@ class Test_Workload_Results():
         assert("error: " not in pytorch_contents)
 
     @pytest.mark.examples
+    @pytest.mark.skipif(((node_label == "graphene_22.04_5.19") and (sgx_mode == '1')),
+                    reason="Node is having some issues")
     def test_r_workload(self):
         r1_result_file = open("CI-Examples/r/RESULT_1", "r")
         r1_contents = r1_result_file.read()
@@ -191,7 +212,7 @@ class Test_Workload_Results():
         assert("error: " not in r1_contents)
 
     @pytest.mark.examples
-    @pytest.mark.skipif((os_release_id not in ["ubuntu", "debian", "alpine"]),
+    @pytest.mark.skipif((os_release_id not in ["ubuntu", "debian"]),
                     reason="GCC not enabled for RPM configurations.")
     def test_gcc_workload(self):
         gcc_result_file = open("CI-Examples/gcc/OUTPUT", "r")
@@ -301,15 +322,22 @@ class Test_Workload_Results():
         assert("error: " not in gsc_helloworld_log)
 
     @pytest.mark.gsc
-    @pytest.mark.skipif(distro_ver != "debian:11", reason='java-simple is enabled only on debian11 currently')
+    def test_gsc_helloworld_direct_workload(self):
+        gsc_helloworld_result = open("helloworld_direct_result", "r")
+        gsc_helloworld_log = gsc_helloworld_result.read()
+        assert('"Hello World! Let\'s check escaped symbols: < & > "' in gsc_helloworld_log)
+        assert("error: " not in gsc_helloworld_log)
+
+    @pytest.mark.gsc
+    @pytest.mark.skipif(distro_ver != "debian:12", reason='java-simple is enabled only on debian12 currently')
     def test_gsc_java_simple_workload(self):
         gsc_java_simple_result = open("openjdk-simple_result", "r")
         gsc_java_simple_log = gsc_java_simple_result.read()
         assert("Hello from Graminized Java application!" in gsc_java_simple_log)
         assert("error: " not in gsc_java_simple_log)
-    
+
     @pytest.mark.gsc
-    @pytest.mark.skipif(distro_ver != "debian:11", reason='java-spring-boot is enabled only on debian11 currently')
+    @pytest.mark.skipif(distro_ver != "debian:12", reason='java-spring-boot is enabled only on debian12 currently')
     def test_gsc_java_spring_boot_workload(self):
         gsc_java_springboot_result = open("openjdk-spring-boot_result", "r")
         gsc_java_springboot_log = gsc_java_springboot_result.read()
@@ -317,8 +345,8 @@ class Test_Workload_Results():
         assert("error: " not in gsc_java_springboot_log)
 
     @pytest.mark.examples
-    @pytest.mark.skipif(((base_os in ["ubuntu24.04", "alpine3.18"]) or ((int(no_cores) < 16) and sgx_mode == '1')),
-                    reason="MongoDB not enabled for alpine distribution")
+    @pytest.mark.skipif(((base_os in ["ubuntu24.04"]) or ((int(no_cores) < 16) and sgx_mode == '1')),
+                    reason="MongoDB not enabled for Ubuntu 24.04")
     def test_mongodb_workload(self):
         mongodb_result = open("CI-Examples/mongodb/OUTPUT", "r")
         mongodb_contents = mongodb_result.read()
@@ -344,3 +372,67 @@ class Test_Workload_Results():
         assert(re.search("connected to (.*) port 5201", iperf_contents) and \
                ("iperf Done" in iperf_contents))
         assert("error: " not in iperf_contents)
+
+    @pytest.mark.examples
+    @pytest.mark.skipif(not(int(no_cores) > 16), reason="Run only on servers")
+    def test_mariadb_workload(self):
+        # NOT is added in the skip condition to improve readability
+        # Test Sequence - Spawn mariadb server in background, run mariadb client, print SUCCESS if successfully launched
+        # Check if the string "SUCCESS" is present in and client_output which generated after running the Makefile
+        assert "SUCCESS" in open("CI-Examples/mariadb/client_output", "r").read()
+       
+    @pytest.mark.gsc
+    @pytest.mark.skipif(distro_ver != "ubuntu:22.04", reason='GSC pytorch base image version is compatible with Ubuntu 22.04')
+    def test_gsc_pytorch_encrypted_workload(self):
+        gsc_build_log = open("gsc_build_log_release", "r")
+        gsc_build_log_content = gsc_build_log.read()
+        assert("RUN cd /gramine     && meson setup build/ --prefix=\"/gramine/meson_build_output\"        --buildtype=release" in gsc_build_log_content)
+        assert("buildtype                                       : release" in gsc_build_log_content)
+        gsc_pytorch_verifier_output = open("gsc_pytorch_verifier_result", "r")
+        gsc_pytorch_verifier_log = gsc_pytorch_verifier_output.read()
+        assert("error: " not in gsc_pytorch_verifier_log)
+
+        gsc_pytorch_output = open("gsc_pytorch_result", "r")
+        gsc_pytorch_log = gsc_pytorch_output.read()
+        assert("Done. The result was written to `result.txt`." in gsc_pytorch_log)
+        assert("error: " not in gsc_pytorch_log)
+
+    @pytest.mark.gsc
+    @pytest.mark.skipif(distro_ver != "ubuntu:22.04", reason='GSC pytorch base image version is compatible with Ubuntu 22.04')
+    def test_gsc_pytorch_encrypted_debug_workload(self):
+        gsc_build_log = open("gsc_build_log_debug", "r")
+        gsc_build_log_content = gsc_build_log.read()
+        assert("RUN cd /gramine     && meson setup build/ --prefix=\"/gramine/meson_build_output\"        --buildtype=debug" in gsc_build_log_content)
+        assert("buildtype                                       : debug" in gsc_build_log_content)
+        gsc_pytorch_verifier_output = open("gsc_pytorch_d_verifier_result", "r")
+        gsc_pytorch_verifier_log = gsc_pytorch_verifier_output.read()
+        assert("error: " not in gsc_pytorch_verifier_log)
+
+        gsc_pytorch_output = open("gsc_pytorch_d_result", "r")
+        gsc_pytorch_log = gsc_pytorch_output.read()
+        assert("Done. The result was written to `result.txt`." in gsc_pytorch_log)
+        assert("error: " not in gsc_pytorch_log)
+
+    @pytest.mark.gsc
+    @pytest.mark.skipif(distro_ver != "ubuntu:22.04", reason='GSC pytorch base image version is compatible with Ubuntu 22.04')
+    def test_gsc_pytorch_encrypted_debugoptimized_workload(self):
+        gsc_build_log = open("gsc_build_log_debugoptimized", "r")
+        gsc_build_log_content = gsc_build_log.read()
+        assert("RUN cd /gramine     && meson setup build/ --prefix=\"/gramine/meson_build_output\"        --buildtype=debugoptimized" in gsc_build_log_content)
+        assert("buildtype                                       : debugoptimized" in gsc_build_log_content)
+        gsc_pytorch_verifier_output = open("gsc_pytorch_do_verifier_result", "r")
+        gsc_pytorch_verifier_log = gsc_pytorch_verifier_output.read()
+        assert("error: " not in gsc_pytorch_verifier_log)
+
+        gsc_pytorch_output = open("gsc_pytorch_do_result", "r")
+        gsc_pytorch_log = gsc_pytorch_output.read()
+        assert("Done. The result was written to `result.txt`." in gsc_pytorch_log)
+        assert("error: " not in gsc_pytorch_log)
+    
+    @pytest.mark.gsc
+    @pytest.mark.skipif(distro_ver != "ubuntu:22.04", reason='GSC OVMS image version is compatible with Ubuntu 22.04')
+    def test_gsc_ovms_workload(self):
+        gsc_ovms_verifier_output = open("gsc_ovms_verifier_result", "r")
+        gsc_ovms_verifier_log = gsc_ovms_verifier_output.read()
+        assert("error: " not in gsc_ovms_verifier_log)
+        assert "SUCCESS" in open("test/ovms/ovms_result.txt", "r").read()

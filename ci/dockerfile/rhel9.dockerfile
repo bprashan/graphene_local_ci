@@ -50,6 +50,7 @@ RUN dnf update -y \
         libXrender \
         libunwind \
         make \
+        mysql-server \
         nasm \
         nc \
         net-tools \
@@ -77,12 +78,14 @@ RUN dnf update -y \
         python3-pkg-resources \
         python3-pyelftools \
         python3-pytest \
+        python3-virtualenv \
         python3-voluptuous \
         R-core \
         strace \
         stress-ng \
         sqlite \
         sudo \
+        sysbench \
         vim  \
         texinfo \
         unzip \
@@ -96,8 +99,6 @@ RUN python3 -B -m pip install -U \
     'tomli-w>=0.4.0' \
     'meson>=0.56' \
     six \
-    torchvision \
-    pillow \
     numpy \
     scipy 
 

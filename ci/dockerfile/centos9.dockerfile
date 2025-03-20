@@ -44,6 +44,7 @@ RUN dnf config-manager --set-enabled -y crb && \
         libXfixes \
         libXrender \
         lsof \
+        mysql-server \
         nasm \
         nc \
         ncurses-devel \
@@ -72,12 +73,14 @@ RUN dnf config-manager --set-enabled -y crb && \
         python3-protobuf \
         python3-pyelftools \
         python3-pytest \
+        python3-virtualenv \
         python3-voluptuous \
         R-core \
         strace \
         stress-ng \
         sqlite \
         sudo \
+        sysbench \
         vim  \
         texinfo \
         wget \
@@ -100,8 +103,6 @@ RUN python3 -m pip install -U \
     six \
     numpy \
     scipy \
-    torchvision \
-    pillow \
     'tomli>=1.1.0' \
     'tomli-w>=0.4.0' \
     'meson>=0.56' \

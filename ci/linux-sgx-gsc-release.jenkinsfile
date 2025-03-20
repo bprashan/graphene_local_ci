@@ -8,20 +8,42 @@ node(node_label) {
         stage('checkout'){
             checkout scm
 
+            if (["", null].contains(env.gsc_repo)) {
+                env.git_repo = 'https://github.com/gramineproject/gsc.git'
+            } else {
+                env.git_repo = env.gsc_repo
+            }
+
+            if (["", null].contains(env.gsc_branch)) {
+                env.git_branch = 'master'
+            } else {
+                env.git_branch = env.gsc_branch
+            }
+
             dir('gsc_dev_repo') {
-                git url: 'https://github.com/gramineproject/gsc.git'
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "${git_branch}"]],
+                    userRemoteConfigs: [[
+                        url: env.git_repo
+                    ]]
+                ])
             }
         }
     
         dir ("gsc_dev_repo") {
             sh 'cp -rf $WORKSPACE/test_workloads.py .'
             sh 'cp -rf $WORKSPACE/gsc/test/* test'
+            sh 'cp -rf $WORKSPACE/gsc/test/pytorch test'
+            sh 'cp -rf $WORKSPACE/gsc/test/ovms test'
+            sh 'cp -rf $WORKSPACE/gsc/verifier .'
+            sh 'cp -rf $WORKSPACE/gsc/keys/* keys'
             env.WORKSPACE = env.WORKSPACE + "/gsc_dev_repo"
             env.os_release_id=distro_ver.split(":")[0].trim()
             env.os_version=distro_ver.split(":")[1].trim()
 
             load '../ci/lib/stage-build-gsc.jenkinsfile'
-            load '../ci/lib/stage-test-gsc.jenkinsfile'
+            load '../ci/lib/stage-verification-gsc.jenkinsfile'
         }
     } finally {
         stage('Workspace cleanup'){

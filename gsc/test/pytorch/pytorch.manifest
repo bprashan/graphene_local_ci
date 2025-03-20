@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2022 Intel Corporation
+
+sgx.enclave_size = "4G"
+sgx.max_threads = 128
+# This is required to run workload as non-root user, any number works except `0` which is for root.
+loader.uid = 999
+loader.gid = 999
+
+sys.enable_extra_runtime_domain_names_conf = true
+
+
+fs.mounts = [
+  { path = "/workspace/classes.txt", uri = "file:classes.txt", type = "encrypted" },
+  { path = "/workspace/input.jpg", uri = "file:input.jpg", type = "encrypted" },
+  { path = "/workspace/alexnet-pretrained.pt", uri = "file:alexnet-pretrained.pt", type = "encrypted" },
+  { path = "/workspace/result.txt", uri = "file:result.txt", type = "encrypted" },
+]
+
+# FIXME: `LD_PRELOAD` should be replaced with `loader.env.LD_LIBRARY_PATH = "/ovms/lib"` when GSC
+# has the concat logic for `loader.env.LD_LIBRARY_PATH`.
+loader.env.LD_PRELOAD = "/gramine/meson_build_output/lib/x86_64-linux-gnu/libsecret_prov_attest.so"
+# Attestation related entries
+sgx.remote_attestation = "dcap"
+loader.env.SECRET_PROVISION_SERVERS = { passthrough = true }
+loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
+loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "/ca.crt"
+loader.env.SECRET_PROVISION_SET_KEY = "default"
+fs.insecure__keys.default = "f9bc253ac8a50e60f5d7335693056697"

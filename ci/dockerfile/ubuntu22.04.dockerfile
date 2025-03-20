@@ -1,7 +1,5 @@
 FROM ubuntu:22.04
 
-ARG IS_VM
-
 # Add steps here to set up dependencies
 RUN apt-get update -y && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     autoconf \
@@ -52,6 +50,7 @@ RUN apt-get update -y && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     lsof \
     musl \
     musl-tools \ 
+    mysql-server \
     nasm \
     net-tools \
     netcat-openbsd \
@@ -82,13 +81,14 @@ RUN apt-get update -y && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-recommonmark \
     python3-scipy \
     python3-sphinx-rtd-theme \
-    python3-torchvision \
+    python3-venv \
     python3-voluptuous \
     r-base \
     shellcheck \
     sphinx-doc \
     stress-ng \
     sqlite3 \
+    sysbench \
     texinfo \
     uthash-dev \
     vim \
@@ -117,7 +117,7 @@ RUN python3 -m pip install -U \
     'docutils>=0.17,<0.18' \
     'meson>=0.56'  \
     'recommonmark>=0.5.0,<=0.7.1' \
-    'scikit-learn-intelex==2023.0.1' \
+    'scikit-learn-intelex' \
     'tomli>=1.1.0' \
     'tomli-w>=0.4.0' --timeout 120
 
@@ -129,21 +129,6 @@ RUN echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.
         sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
 
 RUN apt-get update && apt-get install -y mongodb-org
-
-# Dependencies required for building kernel modules and running VMs
-RUN if [ "$IS_VM" = "1" ]; then \
-    apt-get update -y && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    cpio \
-    dwarves \
-    g++-12 \
-    gcc-12 \
-    kmod \
-    qemu-kvm && \
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12 && \
-    update-alternatives --set gcc /usr/bin/gcc-12 && \
-    update-alternatives --set g++ /usr/bin/g++-12; \
-    fi
 
 # Add the user UID:1000, GID:1000, home at /intel
 RUN groupadd -r intel -g 1000 && useradd -u 1000 -r -g intel -G sudo -m -d /intel -c "intel Jenkins" intel && \

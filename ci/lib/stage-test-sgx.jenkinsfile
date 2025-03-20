@@ -15,33 +15,31 @@ stage('test-sgx') {
         fi
     '''
 
-    if (os_release_id != "alpine") {
-        try {
-            timeout(time: 60, unit: 'MINUTES') {
-                sh '''
-                    cd libos/test/ltp
-                    make ${MAKEOPTS} -f Makefile.LTP SGX=1 all
-                '''
-                // Run tests in a separate block, so that Jenkins measures build time and run time
-                // separately
-                sh '''
-                    cd libos/test/ltp
-                    python3 -m pytest -v  --junit-xml=ltp-sgx.xml
-                '''
-                /*
-                sh '''
-                    cd LibOS/shim/test/ltp
-                    export CFG=ltp-sudo-syscalls.cfg
-                    export LTPSCENARIO=$PWD/install-sgx/runtest/syscalls-sudo
-                    make -f Makefile.LTP ltp-sgx_results_2.xml LTPCFG=$CFG LTPTESTFILE=$LTPSCENARIO
-                '''
-                */
-            }
-        } catch (Exception e) {
-        } finally {
-            archiveArtifacts 'libos/test/ltp/ltp-sgx.xml'
-            junit 'libos/test/ltp/ltp-sgx.xml'
+    try {
+        timeout(time: 60, unit: 'MINUTES') {
+            sh '''
+                cd libos/test/ltp
+                make ${MAKEOPTS} -f Makefile.LTP SGX=1 all
+            '''
+            // Run tests in a separate block, so that Jenkins measures build time and run time
+            // separately
+            sh '''
+                cd libos/test/ltp
+                python3 -m pytest -v  --junit-xml=ltp-sgx.xml
+            '''
+            /*
+            sh '''
+                cd LibOS/shim/test/ltp
+                export CFG=ltp-sudo-syscalls.cfg
+                export LTPSCENARIO=$PWD/install-sgx/runtest/syscalls-sudo
+                make -f Makefile.LTP ltp-sgx_results_2.xml LTPCFG=$CFG LTPTESTFILE=$LTPSCENARIO
+            '''
+            */
         }
+    } catch (Exception e) {
+    } finally {
+        archiveArtifacts 'libos/test/ltp/ltp-sgx.xml'
+        junit 'libos/test/ltp/ltp-sgx.xml'
     }
 
     try{
@@ -49,14 +47,9 @@ stage('test-sgx') {
             sh '''
                 cd CI-Examples/bash
                 sed -i '/@rm OUTPUT/d' Makefile
-                if [ "${os_release_id}" = "centos" ] || [ "${os_release_id}" = "almalinux" ] || [ "${os_release_id}" = "rockylinux" ] || [ "${os_release_id}" = "rhel" ] 
+                if [ "${os_release_id}" = "centos" ] || [ "${os_release_id}" = "rhel" ]
                 then
                     sed -i "s/bin\\/readlink/bin\\/coreutils/" Makefile
-                fi
-                if [ "${os_release_id}" = "alpine" ]
-                then
-                    sed -i -e '/^fs.mounts = \\[.*/a \\{ path = "\\/usr\\/bin", uri="file:\\/usr\\/bin" },' manifest.template
-                    sed -i -e '/^sgx.trusted_files = \\[.*/a \\"file:\\/usr\\/bin\\/",' manifest.template
                 fi
                 make ${MAKEOPTS} all
                 make ${MAKEOPTS} SGX=1 regression 2>&1 | tee result.txt
@@ -68,7 +61,7 @@ stage('test-sgx') {
         timeout(time: 15, unit: 'MINUTES') {
             sh '''
                 cd CI-Examples/memcached
-                make ${MAKEOPTS} all
+                MEMCACHED_SHA256=4ab234219865191e8d1ba57a2f9167d8b573248fa4ff00b4d8296be13d24a82c MEMCACHED_SRC=memcached-1.6.32.tar.gz make ${MAKEOPTS} all
                 make SGX=1 start-gramine-server &
                 ../../scripts/wait_for_server 300 127.0.0.1 11211
                 # memcslap populates server but doesn't report errors, use
@@ -109,14 +102,19 @@ stage('test-sgx') {
             sh '''
                 # TODO this logic is to check both epoll and select varants, and probably
                 # should be split to check both of those separately and on all distros
-                if .ci/isdistro xenial
-                then
-                    USE_SELECT=1
-                    export USE_SELECT
-                fi
+                #if .ci/isdistro xenial
+                #then
+                #    USE_SELECT=1
+                #    export USE_SELECT
+                #fi
 
                 cd CI-Examples/redis
-                make ${MAKEOPTS}
+                wget https://github.com/redis/redis/archive/refs/tags/7.4.1.tar.gz -O redis.tar.gz
+                mkdir src
+                tar -C src --strip-components=1 -xf redis.tar.gz
+                make -C src
+                cp src/src/redis-server redis-server
+                make redis-server.manifest.sgx redis-server.sig
                 make ${MAKEOPTS} SGX=1 start-gramine-server &
                 ../../scripts/wait_for_server 300 127.0.0.1 6379
                 ./src/src/redis-benchmark 2>&1 | tee OUTPUT
@@ -159,32 +157,25 @@ stage('test-sgx') {
         }
     } catch (Exception e) { }
 
-    if (env.os_release_id != "alpine") {
-        try {
-            timeout(time: (env.EDMM ? 45 : 10), unit: 'MINUTES') {
-                sh '''
-                cd CI-Examples/blender
-                if [ "${no_cpu}" -gt 16 ]
-                then
-                    sed -i 's/sgx.enclave_size = "2048M"/sgx.enclave_size = "4G"/g' blender.manifest.template
-                    sed -i 's/sgx.max_threads = {{ .1. if env.get(.EDMM., .0.) == .1. else .64. }}/sgx.max_threads = {{ '"'"'1'"'"' if env.get('"'"'EDMM'"'"', '"'"'0'"'"') == '"'"'1'"'"' else '"'"'256'"'"' }}/g' blender.manifest.template
-                fi
-                make ${MAKEOPTS} all
-                make ${MAKEOPTS} SGX=1 check
-                '''
-            }
-        } catch (Exception e) { }
-    }
+    try {
+        timeout(time: (env.EDMM ? 45 : 10), unit: 'MINUTES') {
+            sh '''
+            cd CI-Examples/blender
+            if [ "${no_cpu}" -gt 16 ]
+            then
+                sed -i 's/sgx.enclave_size = "2048M"/sgx.enclave_size = "4G"/g' blender.manifest.template
+                sed -i 's/sgx.max_threads = {{ .1. if env.get(.EDMM., .0.) == .1. else .64. }}/sgx.max_threads = {{ '"'"'1'"'"' if env.get('"'"'EDMM'"'"', '"'"'0'"'"') == '"'"'1'"'"' else '"'"'256'"'"' }}/g' blender.manifest.template
+            fi
+            make ${MAKEOPTS} all
+            make ${MAKEOPTS} SGX=1 check
+            '''
+        }
+    } catch (Exception e) { }
 
     try{
         timeout(time: (env.EDMM ? 30 : 5), unit: 'MINUTES') {
             sh '''
                 cd CI-Examples/sqlite
-                if [ "${os_release_id}" = "alpine" ]
-                then
-                    sed -i -e '/^fs.mounts = \\[.*/a \\{ path = "\\/usr\\/{{ arch_libdir }}", uri="file:\\/usr\\/{{ arch_libdir }}" },' manifest.template
-                    sed -i -e "/^sgx.trusted_files = \\[.*/a \\"file:\\/usr\\/{{ arch_libdir }}\\/\\"," manifest.template
-                fi
                 make ${MAKEOPTS} all
                 make ${MAKEOPTS} SGX=1 regression
             '''
