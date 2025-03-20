@@ -1,5 +1,4 @@
 # lib-fuzz manifest example
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "/example_fuzzer"
 
 loader.log_level = "error"
@@ -21,7 +20,7 @@ fs.mounts = [
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "/usr", uri = "file:/usr" },
   { path = "/bin", uri = "file:/bin" },
-  { path = "/cipher_corpus", uri = "file:cipher_corpus", type = "encrypted", key_name = "wrap_key" },
+  { path = "/cipher_corpus", uri = "file:cipher_corpus", type = "encrypted", key_name = "wrap_key", enable_recovery = true },
   { path = "/example_fuzzer", uri = "file:example_fuzzer" },
   { type = "tmpfs", path = "/tmp" },
 ]
